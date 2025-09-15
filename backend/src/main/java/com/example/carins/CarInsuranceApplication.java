@@ -8,4 +8,6 @@ public class CarInsuranceApplication {
     public static void main(String[] args) {
         SpringApplication.run(CarInsuranceApplication.class, args);
     }
+
+
 }
