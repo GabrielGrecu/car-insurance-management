@@ -1,0 +1,57 @@
+name: CI - Build Car Insurance Backend
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:15.2
+        env:
+          POSTGRES_USER: endava
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cars
+        ports:
+          - 5332:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build and run Tests with Maven
+        run: mvn -ntp -B verify
+
+      - name: Send Slack Notification
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            EMOJI=":white_check_mark:"
+            MESSAGE="CI Build passed successfully! :rocket:"
+          else
+            EMOJI=":x:"
+            MESSAGE="CI Build failed! :warning:"
+          fi
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"$EMOJI Car Insurance CI Build: $MESSAGE\nBranch: ${{ github.head_ref }}\nCommit: ${{ github.sha }}\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}

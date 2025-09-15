@@ -1,0 +1,122 @@
+name: CD - Deploy Car Insurance Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:15.2
+        env:
+          POSTGRES_USER: endava
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cars
+        ports:
+          - 5332:5432
+        options:
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Notify Slack - Deployment Started
+        run: >
+          curl -X POST -H 'Content-type: application/json'
+          --data '{"text":":rocket: Car Insurance Deployment Started\nCommit: ${{ github.sha }}\nMessage: ${{ github.event.head_commit.message }}"}' 
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn -ntp -B clean package
+
+      - name: Run Tests
+        run: mvn -ntp -B test
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Create Docker Image Tag
+        id: docker-tag
+        run: echo "TAG=$(date '+%Y.%m.%d.%H.%M')" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }} .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}
+          
+          # Also push as latest
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }} ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:latest
+
+      - name: Notify Slack - Docker Image Pushed
+        run: >
+          curl -X POST -H 'Content-type: application/json'
+          --data '{"text":":docker: Docker Image Pushed!\nImage: ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}\nView: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api"}' 
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Update Dockerrun.aws.json
+        run: |
+          # Create or update the Docker image tag in deployment config
+          echo '{
+            "AWSEBDockerrunVersion": 2,
+            "containerDefinitions": [
+              {
+                "name": "car-insurance-api",
+                "image": "${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}",
+                "essential": true,
+                "memory": 512,
+                "portMappings": [
+                  {
+                    "hostPort": 8080,
+                    "containerPort": 8080
+                  }
+                ]
+              }
+            ]
+          }' > Dockerrun.aws.json
+
+      - name: Notify Slack - Deployment Completed
+        run: >
+          curl -X POST -H 'content-type: application/json'
+          --data '{"text":":party_blob: Car Insurance Deployment Completed Successfully!\nImage: ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}\nTest API: http://localhost:8080/api/cars"}' 
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Update README with build info
+        run: |
+          echo -e "\n\n## Last Deployment\n- **Date**: $(date)\n- **Commit**: ${{ github.sha }}\n- **Docker Image**: ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}\n- **Status**: ✅ Success" >> README.md
+
+      - name: Commit deployment files
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add README.md Dockerrun.aws.json
+          git commit -m "Deployment update ${{ steps.docker-tag.outputs.TAG }}" || echo "No changes to commit"
+          git push || echo "Nothing to push"
