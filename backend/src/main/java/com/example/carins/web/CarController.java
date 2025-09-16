@@ -26,10 +26,16 @@ public class CarController {
 
     @GetMapping("/cars/{carId}/insurance-valid")
     public ResponseEntity<?> isInsuranceValid(@PathVariable Long carId, @RequestParam String date) {
-        // TODO: validate date format and handle errors consistently
-        LocalDate d = LocalDate.parse(date);
-        boolean valid = service.isInsuranceValid(carId, d);
-        return ResponseEntity.ok(new InsuranceValidityResponse(carId, d.toString(), valid));
+        try {
+            LocalDate parsedDate = service.validateAndParseDate(date);
+
+            boolean valid = service.isInsuranceValid(carId, parsedDate);
+
+            return ResponseEntity.ok(new InsuranceValidityResponse(carId, parsedDate.toString(), valid));
+
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     private CarDto toDto(Car c) {
