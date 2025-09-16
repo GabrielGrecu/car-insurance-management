@@ -19,3 +19,10 @@
 - **Commit**: 6077cd73d88a5f08bc1bf4a8469e1733b7fc39bd
 - **Docker Image**: alexandrugabrielgrecu/car-insurance-api:2025.09.16.21.53
 - **Status**: ✅ Success
+
+
+## Last Deployment
+- **Date**: Tue Sep 16 23:09:10 UTC 2025
+- **Commit**: 4f6cdd956c38aafe49ae0d0f46bb49fb9b48199a
+- **Docker Image**: alexandrugabrielgrecu/car-insurance-api:2025.09.16.23.08
+- **Status**: ✅ Success
