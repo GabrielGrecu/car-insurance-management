@@ -12,5 +12,6 @@ INSERT INTO insurancepolicy (id, car_id, provider, start_date, end_date) VALUES 
 INSERT INTO insurancepolicy (id, car_id, provider, start_date, end_date) VALUES (2, 1, 'Groupama', '2025-01-01', '2026-01-01');
 INSERT INTO insurancepolicy (id, car_id, provider, start_date, end_date) VALUES (3, 2, 'Allianz', '2025-03-01', '2025-09-30');
 
-
+UPDATE insurancepolicy SET end_date = CURRENT_DATE WHERE id = 1;
+UPDATE insurancepolicy SET end_date = CURRENT_DATE - INTERVAL '7 days' WHERE id = 2;
 SELECT setval('insurancepolicy_id_seq', (SELECT MAX(id) FROM insurancepolicy));
