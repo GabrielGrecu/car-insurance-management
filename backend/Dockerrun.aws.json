@@ -3,7 +3,7 @@
   "containerDefinitions": [
     {
       "name": "car-insurance-api",
-      "image": "alexandrugabrielgrecu/car-insurance-api:2025.09.17.08.19",
+      "image": "alexandrugabrielgrecu/car-insurance-api:2025.09.17.11.11",
       "essential": true,
       "memory": 512,
       "portMappings": [
