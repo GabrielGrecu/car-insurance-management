@@ -111,7 +111,7 @@ jobs:
 
       - name: Update README with build info
         run: |
-          echo -e "\n\n## Last Deployment\n- **Date**: $(date)\n- **Commit**: ${{ github.sha }}\n- **Docker Image**: ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}\n- **Status**: ✅ Success" >> README.md
+          echo -e "\n\n## Last Deployment\n- **Date**: $(date)\n- **Commit**: ${{ github.sha }}\n- **Docker Image**: ${{ secrets.DOCKERHUB_USERNAME }}/car-insurance-api:${{ steps.docker-tag.outputs.TAG }}\n- **Status**: Success" >> README.md
 
       - name: Commit deployment files
         run: |

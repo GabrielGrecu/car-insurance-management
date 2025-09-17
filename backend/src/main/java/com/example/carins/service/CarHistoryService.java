@@ -85,7 +85,6 @@ public class CarHistoryService {
 
         Claim savedClaim = claimRepository.save(claim);
 
-        // The location header will be handled by the controller or can be constructed here if needed
         return ClaimResponse.fromEntity(savedClaim);
     }
 }

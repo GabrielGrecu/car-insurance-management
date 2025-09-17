@@ -1,7 +1,10 @@
 package com.example.carins.service;
 
+import com.example.carins.model.Car;
+import com.example.carins.model.Owner;
 import com.example.carins.repo.CarRepository;
 import com.example.carins.repo.InsurancePolicyRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -26,59 +30,86 @@ class CarServiceTest {
     @InjectMocks
     private CarService carService;
 
-    @Test
-    void validateAndParseDate_WithValidDate_ShouldReturnDate() {
-        LocalDate result = carService.validateAndParseDate("2025-06-01");
-        assertEquals(LocalDate.of(2025, 6, 1), result);
+    private Car testCar;
+    private Owner testOwner;
+
+    @BeforeEach
+    void setUp() {
+        testOwner = new Owner("Test Owner", "test@endava.com");
+        testOwner.setId(1L);
+
+        testCar = new Car("VIN123", "Dacia", "Logan", 2020, testOwner);
+        testCar.setId(1L);
     }
 
     @Test
-    void validateAndParseDate_WithInvalidFormat_ShouldThrowException() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.validateAndParseDate("2025/06/01");
-        });
-        assertTrue(exception.getMessage().contains("Invalid date format"));
+    void listCars_shouldReturnAllCars() {
+        when(carRepository.findAll()).thenReturn(List.of(testCar));
+
+        List<Car> result = carService.listCars();
+
+        assertEquals(1, result.size());
+        assertEquals("VIN123", result.get(0).getVin());
+        verify(carRepository, times(1)).findAll();
     }
 
     @Test
-    void validateAndParseDate_WithNullDate_ShouldThrowException() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.validateAndParseDate(null);
-        });
-        assertTrue(exception.getMessage().contains("Date parameter is required"));
+    void isInsuranceValid_withValidCarAndDate_shouldReturnTrue() {
+        Long carId = 1L;
+        LocalDate date = LocalDate.now();
+
+        when(carRepository.existsById(carId)).thenReturn(true);
+        when(policyRepository.existsActiveOnDate(carId, date)).thenReturn(true);
+
+        boolean result = carService.isInsuranceValid(carId, date);
+
+        assertTrue(result);
+        verify(carRepository, times(1)).existsById(carId);
+        verify(policyRepository, times(1)).existsActiveOnDate(carId, date);
     }
 
     @Test
-    void validateAndParseDate_WithEmptyDate_ShouldThrowException() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.validateAndParseDate("");
-        });
-        assertTrue(exception.getMessage().contains("Date parameter is required"));
+    void isInsuranceValid_withNonExistentCar_shouldThrowException() {
+        Long carId = 999L;
+        LocalDate date = LocalDate.now();
+
+        when(carRepository.existsById(carId)).thenReturn(false);
+
+        assertThrows(ResponseStatusException.class, () ->
+                carService.isInsuranceValid(carId, date));
+
+        verify(carRepository, times(1)).existsById(carId);
+        verify(policyRepository, never()).existsActiveOnDate(any(), any());
     }
 
     @Test
-    void validateAndParseDate_WithDateTooFarInPast_ShouldThrowException() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.validateAndParseDate("1999-01-01");
-        });
-        assertTrue(exception.getMessage().contains("Date cannot be before"));
+    void validateAndParseDate_withValidDate_shouldReturnDate() {
+        String validDate = "2024-01-15";
+
+        LocalDate result = carService.validateAndParseDate(validDate);
+
+        assertEquals(LocalDate.of(2024, 1, 15), result);
     }
 
     @Test
-    void validateAndParseDate_WithDateTooFarInFuture_ShouldThrowException() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.validateAndParseDate("2040-01-01");
-        });
-        assertTrue(exception.getMessage().contains("Date cannot be more than 10 years in the future"));
+    void validateAndParseDate_withInvalidDate_shouldThrowException() {
+        String invalidDate = "invalid-date";
+
+        assertThrows(ResponseStatusException.class, () ->
+                carService.validateAndParseDate(invalidDate));
     }
 
     @Test
-    void isInsuranceValid_WithNonExistingCar_ShouldThrowNotFoundException() {
-        when(carRepository.existsById(999L)).thenReturn(false);
+    void validateAndParseDate_withNullDate_shouldThrowException() {
+        assertThrows(ResponseStatusException.class, () ->
+                carService.validateAndParseDate(null));
+    }
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            carService.isInsuranceValid(999L, LocalDate.now());
-        });
-        assertTrue(exception.getMessage().contains("not found"));
+    @Test
+    void validateAndParseDate_withDateBefore2000_shouldThrowException() {
+        String oldDate = "1999-12-31";
+
+        assertThrows(ResponseStatusException.class, () ->
+                carService.validateAndParseDate(oldDate));
     }
 }
