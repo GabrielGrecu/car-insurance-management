@@ -12,8 +12,8 @@ import java.util.List;
 public interface ClaimRepository extends JpaRepository<Claim, Long> {
     List<Claim> findByCarIdOrderByClaimDateDesc(Long carId);
 
-    @Query("SELECT c FROM Claim c WHERE c.car.id = :carId ORDER BY c.claimDate DESC")
-    List<Claim> findClaimsByCarId(@Param("carId") Long carId);
-
-    boolean existsByCarId(Long carId);
+//    @Query("SELECT c FROM Claim c WHERE c.car.id = :carId ORDER BY c.claimDate DESC")
+//    List<Claim> findClaimsByCarId(@Param("carId") Long carId);
+//
+//    boolean existsByCarId(Long carId);
 }
