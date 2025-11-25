@@ -14,7 +14,7 @@ services:
 
   insurance-api:
     container_name: insurance-api
-    build: ./backend   # <--- dacă vrei să construiești local din Dockerfile
+    build: ./backend  
     image: alexandrugabrielgrecu/car-insurance-api:latest
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cars
